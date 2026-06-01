@@ -5,11 +5,14 @@ import { Home, Plus, MessageCircle, User } from 'lucide-react';
 import MarketView from '@/components/MarketView';
 import ProductDetail from '@/components/ProductDetail';
 import SellView from '@/components/SellView';
-import { mockProducts, mockSellers } from '@/lib/mockData';
+import InboxView from '@/components/InboxView';
+import ChatRoom from '@/components/ChatRoom';
+import { mockProducts, mockSellers, mockConversations } from '@/lib/mockData';
 
 export default function EscolarApp() {
   const [activeTab, setActiveTab] = useState('market');
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
 
   const selectedProduct = selectedProductId
     ? mockProducts.find((p) => p.id === selectedProductId)
@@ -19,7 +22,24 @@ export default function EscolarApp() {
     ? mockSellers[selectedProduct.sellerId]
     : null;
 
+  const selectedConversation = selectedConversationId
+    ? mockConversations.find((c) => c.id === selectedConversationId)
+    : null;
+
   const renderView = () => {
+    // Chat Room view (prioritary)
+    if (selectedConversation) {
+      return (
+        <ChatRoom
+          conversationId={selectedConversation.id}
+          productId={selectedConversation.productId}
+          initialMessages={selectedConversation.messages}
+          onBack={() => setSelectedConversationId(null)}
+        />
+      );
+    }
+
+    // Product Detail view
     if (selectedProduct && selectedSeller) {
       return (
         <ProductDetail
@@ -31,17 +51,14 @@ export default function EscolarApp() {
       );
     }
 
+    // Tab views
     switch (activeTab) {
       case 'market':
         return <MarketView onProductTap={setSelectedProductId} />;
       case 'sell':
         return <SellView />;
       case 'messages':
-        return (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-gray-500 font-medium">Vista Mensajes</p>
-          </div>
-        );
+        return <InboxView onSelectConversation={setSelectedConversationId} />;
       case 'profile':
         return (
           <div className="flex items-center justify-center h-full">
@@ -60,8 +77,8 @@ export default function EscolarApp() {
         {renderView()}
       </div>
 
-      {/* Bottom Navigation Bar - Hidden when product detail is open */}
-      {!selectedProduct && (
+      {/* Bottom Navigation Bar - Hidden when product detail or chat is open */}
+      {!selectedProduct && !selectedConversation && (
         <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-200 flex justify-around items-center h-20">
           <button
             onClick={() => setActiveTab('market')}

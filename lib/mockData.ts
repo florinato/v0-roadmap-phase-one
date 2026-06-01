@@ -92,3 +92,85 @@ export const mockProducts = [
     sellerId: 'u3',
   },
 ];
+
+export interface Message {
+  id: string;
+  senderType: 'user' | 'seller';
+  text: string;
+  timestamp: Date;
+}
+
+export interface Conversation {
+  id: string;
+  productId: string;
+  sellerId: string;
+  messages: Message[];
+  lastMessage: string;
+  lastMessageTime: Date;
+}
+
+export const mockConversations: Conversation[] = [
+  {
+    id: 'conv1',
+    productId: 'p1',
+    sellerId: 'u1',
+    messages: [
+      {
+        id: 'm1',
+        senderType: 'seller',
+        text: 'Hola, el libro sigue disponible. ¿Tienes interés?',
+        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
+      },
+      {
+        id: 'm2',
+        senderType: 'user',
+        text: '¿Está incluido el CD de ejercicios?',
+        timestamp: new Date(Date.now() - 1.5 * 60 * 60 * 1000),
+      },
+      {
+        id: 'm3',
+        senderType: 'seller',
+        text: 'Sí, viene con todo. Está sin escribir prácticamente nuevo.',
+        timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000),
+      },
+    ],
+    lastMessage: 'Sí, viene con todo. Está sin escribir prácticamente nuevo.',
+    lastMessageTime: new Date(Date.now() - 1 * 60 * 60 * 1000),
+  },
+  {
+    id: 'conv2',
+    productId: 'p2',
+    sellerId: 'u2',
+    messages: [
+      {
+        id: 'm4',
+        senderType: 'seller',
+        text: '¿Qué talla tienes?',
+        timestamp: new Date(Date.now() - 4 * 60 * 1000),
+      },
+      {
+        id: 'm5',
+        senderType: 'user',
+        text: 'Talla M pero necesito la falda un poco más larga',
+        timestamp: new Date(Date.now() - 2 * 60 * 1000),
+      },
+    ],
+    lastMessage: 'Talla M pero necesito la falda un poco más larga',
+    lastMessageTime: new Date(Date.now() - 2 * 60 * 1000),
+  },
+  {
+    id: 'conv3',
+    productId: 'p4',
+    sellerId: 'u1',
+    messages: [
+      {
+        id: 'm6',
+        senderType: 'user',
+        text: '¿Dónde podemos quedar?',
+        timestamp: new Date(Date.now() - 30 * 60 * 1000),
+      },
+    ],
+    lastMessage: '¿Dónde podemos quedar?',
+    lastMessageTime: new Date(Date.now() - 30 * 60 * 1000),
+  },
+];
