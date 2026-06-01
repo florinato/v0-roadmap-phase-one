@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Home, Plus, MessageCircle, User } from 'lucide-react';
 
-export default function Home() {
+export default function EscolarApp() {
   const [activeTab, setActiveTab] = useState('market');
 
   const renderView = () => {
