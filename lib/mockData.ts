@@ -109,7 +109,72 @@ export interface Conversation {
   lastMessageTime: Date;
 }
 
-export const mockConversations: Conversation[] = [
+export const mockCurrentUser = {
+  id: 'current-user',
+  name: 'Laura Fernández',
+  avatarUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=120&h=120&fit=crop',
+  rating: 4.9,
+  reviewsCount: 23,
+};
+
+// Current user's inventory (sellerId = 'current-user')
+export const mockUserProducts = [
+  {
+    id: 'my-p1',
+    title: 'Libros de Literatura 2º ESO',
+    price: 18,
+    imageUrl: 'https://images.unsplash.com/photo-1507842217343-583f7270bfba?w=200&h=200&fit=crop',
+    condition: 'Buen estado',
+    state: 'active' as const,
+    description: 'Libros de lectura para 2º ESO. Sin marcas ni notas.',
+    sellerId: 'current-user',
+    interestedBuyers: 3,
+  },
+  {
+    id: 'my-p2',
+    title: 'Uniforme Talla S',
+    price: 30,
+    imageUrl: 'https://images.unsplash.com/photo-1618886723857-ba0b32e2a1e9?w=200&h=200&fit=crop',
+    condition: 'Como nuevo',
+    state: 'reserved' as const,
+    description: 'Uniforme completo poco usado. Falda + blusa.',
+    sellerId: 'current-user',
+    interestedBuyers: 1,
+  },
+  {
+    id: 'my-p3',
+    title: 'Botas de Educación Física',
+    price: 25,
+    imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&h=200&fit=crop',
+    condition: 'Buen estado',
+    state: 'sold' as const,
+    description: 'Botas deportivas marca Nike. Poco usadas.',
+    sellerId: 'current-user',
+    interestedBuyers: 0,
+  },
+  {
+    id: 'my-p4',
+    title: 'Lote Estuches y Material',
+    price: 12,
+    imageUrl: 'https://images.unsplash.com/photo-1507842821343-583f7270bfba?w=200&h=200&fit=crop',
+    condition: 'Sin usar',
+    state: 'active' as const,
+    description: 'Estuches, lápices y ceras. Todo nuevo sin abrir.',
+    sellerId: 'current-user',
+    interestedBuyers: 2,
+  },
+  {
+    id: 'my-p5',
+    title: 'Mochila Escolar 30L',
+    price: 40,
+    imageUrl: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=200&h=200&fit=crop',
+    condition: 'Buen estado',
+    state: 'reserved' as const,
+    description: 'Mochila resistente en color negro. Bolsillo para portátil.',
+    sellerId: 'current-user',
+    interestedBuyers: 1,
+  },
+];
   {
     id: 'conv1',
     productId: 'p1',

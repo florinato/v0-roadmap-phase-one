@@ -7,6 +7,7 @@ import ProductDetail from '@/components/ProductDetail';
 import SellView from '@/components/SellView';
 import InboxView from '@/components/InboxView';
 import ChatRoom from '@/components/ChatRoom';
+import ProfileView from '@/components/ProfileView';
 import { mockProducts, mockSellers, mockConversations } from '@/lib/mockData';
 
 export default function EscolarApp() {
@@ -60,11 +61,7 @@ export default function EscolarApp() {
       case 'messages':
         return <InboxView onSelectConversation={setSelectedConversationId} />;
       case 'profile':
-        return (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-gray-500 font-medium">Vista Perfil</p>
-          </div>
-        );
+        return <ProfileView />;
       default:
         return null;
     }
