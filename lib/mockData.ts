@@ -176,6 +176,64 @@ export const mockUserProducts = [
   },
 ];
 
+export interface Review {
+  id: string;
+  buyerName: string;
+  buyerAvatar: string;
+  rating: number;
+  comment: string;
+  productTitle: string;
+  date: Date;
+}
+
+export const mockUserReviews: Review[] = [
+  {
+    id: 'r1',
+    buyerName: 'Isabel García',
+    buyerAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=40&h=40&fit=crop',
+    rating: 5,
+    comment: 'Libro en perfectas condiciones. Muy rápido en la entrega. Recomendado!',
+    productTitle: 'Libros de Literatura 2º ESO',
+    date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+  },
+  {
+    id: 'r2',
+    buyerName: 'Javier López',
+    buyerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop',
+    rating: 5,
+    comment: 'Uniforme como nuevo, muy buena calidad. Vendedor muy responsable.',
+    productTitle: 'Uniforme Talla S',
+    date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+  },
+  {
+    id: 'r3',
+    buyerName: 'María Rodríguez',
+    buyerAvatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop',
+    rating: 4,
+    comment: 'Botas en buen estado, pocas señales de uso. Buen precio.',
+    productTitle: 'Botas de Educación Física',
+    date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
+  },
+  {
+    id: 'r4',
+    buyerName: 'David Martín',
+    buyerAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=40&h=40&fit=crop',
+    rating: 5,
+    comment: 'Material de calidad sin abrir. Muy satisfecho con la compra.',
+    productTitle: 'Lote Estuches y Material',
+    date: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
+  },
+  {
+    id: 'r5',
+    buyerName: 'Sandra Pérez',
+    buyerAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=40&h=40&fit=crop',
+    rating: 5,
+    comment: 'Mochila muy resistente y en perfecto estado. Excelente vendedora!',
+    productTitle: 'Mochila Escolar 30L',
+    date: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000),
+  },
+];
+
 export const mockConversations: Conversation[] = [
   {
     id: 'conv1',
