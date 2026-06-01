@@ -8,7 +8,6 @@ interface FormData {
   title: string;
   description: string;
   category: string;
-  course: string;
   price: string;
   condition: string;
 }
@@ -18,7 +17,6 @@ export default function UploadForm() {
     title: '',
     description: '',
     category: '',
-    course: '',
     price: '',
     condition: 'used',
   });
@@ -48,14 +46,13 @@ export default function UploadForm() {
         title: '',
         description: '',
         category: '',
-        course: '',
         price: '',
         condition: 'used',
       });
     }, 1000);
   };
 
-  const isFormValid = formData.title && formData.price && formData.category && formData.course;
+  const isFormValid = formData.title && formData.price && formData.category;
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
@@ -96,7 +93,7 @@ export default function UploadForm() {
         <p className="text-xs text-gray-500">{formData.description.length}/300</p>
       </div>
 
-      {/* Grid: Category + Course */}
+      {/* Grid: Category + Price */}
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-2">
           <label className="text-sm font-semibold text-gray-900">
@@ -120,29 +117,6 @@ export default function UploadForm() {
 
         <div className="flex flex-col gap-2">
           <label className="text-sm font-semibold text-gray-900">
-            Curso
-          </label>
-          <select
-            name="course"
-            value={formData.course}
-            onChange={handleChange}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-          >
-            <option value="">Seleccionar</option>
-            <option value="primaria1">1º Primaria</option>
-            <option value="primaria6">6º Primaria</option>
-            <option value="eso1">1º ESO</option>
-            <option value="eso4">4º ESO</option>
-            <option value="bach1">1º Bachiller</option>
-            <option value="bach2">2º Bachiller</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Grid: Price + Condition */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-semibold text-gray-900">
             Precio (€)
           </label>
           <input
@@ -156,23 +130,24 @@ export default function UploadForm() {
             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           />
         </div>
+      </div>
 
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-semibold text-gray-900">
-            Estado
-          </label>
-          <select
-            name="condition"
-            value={formData.condition}
-            onChange={handleChange}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-          >
-            <option value="new">Nuevo</option>
-            <option value="like-new">Como nuevo</option>
-            <option value="used">Usado</option>
-            <option value="fair">Defectos</option>
-          </select>
-        </div>
+      {/* Estado */}
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-semibold text-gray-900">
+          Estado
+        </label>
+        <select
+          name="condition"
+          value={formData.condition}
+          onChange={handleChange}
+          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+        >
+          <option value="new">Nuevo</option>
+          <option value="like-new">Como nuevo</option>
+          <option value="used">Usado</option>
+          <option value="fair">Defectos</option>
+        </select>
       </div>
 
       {/* Submit Button */}
