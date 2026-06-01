@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Home, Plus, MessageCircle, User } from 'lucide-react';
 import MarketView from '@/components/MarketView';
 import ProductDetail from '@/components/ProductDetail';
+import SellView from '@/components/SellView';
 import { mockProducts, mockSellers } from '@/lib/mockData';
 
 export default function EscolarApp() {
@@ -34,11 +35,7 @@ export default function EscolarApp() {
       case 'market':
         return <MarketView onProductTap={setSelectedProductId} />;
       case 'sell':
-        return (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-gray-500 font-medium">Vista Vender</p>
-          </div>
-        );
+        return <SellView />;
       case 'messages':
         return (
           <div className="flex items-center justify-center h-full">
