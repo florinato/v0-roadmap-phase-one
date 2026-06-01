@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Home, Plus, MessageCircle, User } from 'lucide-react';
 import MarketView from '@/components/MarketView';
 import ProductDetail from '@/components/ProductDetail';
@@ -8,12 +8,35 @@ import SellView from '@/components/SellView';
 import InboxView from '@/components/InboxView';
 import ChatRoom from '@/components/ChatRoom';
 import ProfileView from '@/components/ProfileView';
+import OnboardingScreen from '@/components/OnboardingScreen';
+import AuthScreen from '@/components/AuthScreen';
 import { mockProducts, mockSellers, mockConversations } from '@/lib/mockData';
+import { useAuth } from '@/lib/authContext';
 
 export default function EscolarApp() {
+  const { user, isLoading, hasSeenOnboarding, completeOnboarding } = useAuth();
   const [activeTab, setActiveTab] = useState('market');
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+
+  // Show loading state while checking localStorage
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-white">
+        <div className="text-gray-500">Cargando...</div>
+      </div>
+    );
+  }
+
+  // Show onboarding if user hasn't seen it yet
+  if (!hasSeenOnboarding) {
+    return <OnboardingScreen onComplete={completeOnboarding} />;
+  }
+
+  // Show auth screen if not logged in
+  if (!user) {
+    return <AuthScreen />;
+  }
 
   const selectedProduct = selectedProductId
     ? mockProducts.find((p) => p.id === selectedProductId)
