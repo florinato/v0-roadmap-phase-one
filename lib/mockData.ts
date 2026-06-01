@@ -175,6 +175,8 @@ export const mockUserProducts = [
     interestedBuyers: 1,
   },
 ];
+
+export const mockConversations: Conversation[] = [
   {
     id: 'conv1',
     productId: 'p1',
