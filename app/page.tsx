@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Home, Plus, MessageCircle, User } from 'lucide-react';
+import MarketView from '@/components/MarketView';
 
 export default function EscolarApp() {
   const [activeTab, setActiveTab] = useState('market');
@@ -9,11 +10,7 @@ export default function EscolarApp() {
   const renderView = () => {
     switch (activeTab) {
       case 'market':
-        return (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-gray-500 font-medium">Vista Mercado</p>
-          </div>
-        );
+        return <MarketView />;
       case 'sell':
         return (
           <div className="flex items-center justify-center h-full">
