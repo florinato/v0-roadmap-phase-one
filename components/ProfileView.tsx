@@ -20,7 +20,24 @@ export default function ProfileView() {
 
   const handleSubmitReview = (rating: number, comment: string) => {
     console.log('Nueva reseña:', { rating, comment });
-    // Aquí iría la lógica de guardar la reseña
+  };
+
+  const handleEditProduct = (id: string) => {
+    console.log('[v0] Editar producto:', id);
+  };
+
+  const handleDeleteProduct = (id: string) => {
+    console.log('[v0] Eliminar producto:', id);
+  };
+
+  const handleMarkAsReserved = (id: string) => {
+    console.log('[v0] Producto marcado como reservado:', id);
+    // Aquí iría la lógica de actualizar el estado
+  };
+
+  const handleMarkAsSold = (id: string) => {
+    console.log('[v0] Producto marcado como vendido:', id);
+    // Aquí iría la lógica de actualizar el estado
   };
 
   return (
@@ -73,8 +90,8 @@ export default function ProfileView() {
             <SegmentedControl selectedFilter={selectedFilter} onFilterChange={setSelectedFilter} />
             <InventoryList
               items={filteredProducts}
-              onEdit={(id) => console.log('Editar:', id)}
-              onDelete={(id) => console.log('Eliminar:', id)}
+              onEdit={handleEditProduct}
+              onDelete={handleDeleteProduct}
             />
           </>
         ) : (

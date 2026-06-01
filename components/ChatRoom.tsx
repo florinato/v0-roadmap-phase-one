@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import ChatHeader from './ChatHeader';
+import ChatHeaderV2 from './ChatHeaderV2';
 import MessageList from './MessageList';
 import InputBar from './InputBar';
-import { Message } from '@/lib/mockData';
+import TransactionConfirmModal from './TransactionConfirmModal';
+import { Message, mockProducts, mockCurrentUser } from '@/lib/mockData';
 
 interface ChatRoomProps {
   conversationId: string;
@@ -19,6 +20,11 @@ export default function ChatRoom({
   onBack,
 }: ChatRoomProps) {
   const [messages, setMessages] = useState(initialMessages);
+  const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
+  const [productState, setProductState] = useState<'active' | 'reserved' | 'sold'>('active');
+
+  const product = mockProducts.find((p) => p.id === productId);
+  const isCurrentUserSeller = product?.sellerId === mockCurrentUser.id;
 
   const handleSendMessage = (text: string) => {
     const newMessage: Message = {
@@ -51,11 +57,45 @@ export default function ChatRoom({
     }, 1000);
   };
 
+  const handleConfirmReserved = () => {
+    setProductState('reserved');
+    console.log('[v0] Producto marcado como reservado');
+  };
+
+  const handleConfirmSold = () => {
+    setProductState('sold');
+    console.log('[v0] Producto marcado como vendido');
+  };
+
+  if (!product) {
+    return <div className="flex items-center justify-center h-full">Producto no encontrado</div>;
+  }
+
   return (
     <div className="flex flex-col h-full bg-white">
-      <ChatHeader productId={productId} onBack={onBack} />
+      <ChatHeaderV2
+        productImage={product.imageUrl}
+        productTitle={product.title}
+        productPrice={product.price}
+        productState={productState}
+        sellerName={product.description}
+        isCurrentUserSeller={isCurrentUserSeller}
+        onBack={onBack}
+        onMarkReserved={() => setIsTransactionModalOpen(true)}
+        onMarkSold={() => setIsTransactionModalOpen(true)}
+      />
       <MessageList messages={messages} />
       <InputBar onSendMessage={handleSendMessage} />
+
+      {/* Transaction Confirmation Modal */}
+      <TransactionConfirmModal
+        isOpen={isTransactionModalOpen}
+        productTitle={product.title}
+        buyerName="Juan Pérez"
+        onConfirmReserved={handleConfirmReserved}
+        onConfirmSold={handleConfirmSold}
+        onCancel={() => setIsTransactionModalOpen(false)}
+      />
     </div>
   );
 }
