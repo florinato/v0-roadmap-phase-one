@@ -42,6 +42,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setHasSeenOnboarding(true);
     }
 
+    // Si auth no está disponible, cargar solo desde localStorage
+    if (!auth) {
+      console.log('[v0] Firebase auth not available, using localStorage');
+      const savedUser = localStorage.getItem('escolarapp_user');
+      if (savedUser) {
+        setUser(JSON.parse(savedUser));
+      }
+      setIsLoading(false);
+      return;
+    }
+
     // Escuchar cambios de autenticación en Firebase
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
