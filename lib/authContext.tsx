@@ -1,6 +1,14 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/services/firebase';
+import {
+  signupWithEmail,
+  loginWithEmail,
+  logoutUser,
+  getCurrentUserData,
+} from '@/lib/services/db';
 
 interface User {
   id: string;
@@ -26,48 +34,89 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
 
-  // Initialize from localStorage
+  // Initialize from Firebase Auth y localStorage
   useEffect(() => {
-    const savedUser = localStorage.getItem('escolarapp_user');
     const savedOnboarding = localStorage.getItem('escolarapp_onboarding');
 
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
     if (savedOnboarding) {
       setHasSeenOnboarding(true);
     }
 
-    setIsLoading(false);
+    // Escuchar cambios de autenticación en Firebase
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // Usuario autenticado en Firebase
+        const userData = await getCurrentUserData(firebaseUser.uid);
+        const mappedUser: User = {
+          id: firebaseUser.uid,
+          name: userData?.name || firebaseUser.displayName || 'Usuario',
+          email: firebaseUser.email || '',
+          avatarUrl:
+            userData?.avatarUrl ||
+            'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=120&h=120&fit=crop',
+        };
+        setUser(mappedUser);
+        localStorage.setItem('escolarapp_user', JSON.stringify(mappedUser));
+      } else {
+        // Usuario no autenticado
+        const savedUser = localStorage.getItem('escolarapp_user');
+        if (savedUser) {
+          setUser(JSON.parse(savedUser));
+        } else {
+          setUser(null);
+        }
+      }
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
-    // Mock login - in real app, this would call an API
-    const mockUser: User = {
-      id: 'user-123',
-      name: email.split('@')[0],
-      email,
-      avatarUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=120&h=120&fit=crop',
-    };
-    setUser(mockUser);
-    localStorage.setItem('escolarapp_user', JSON.stringify(mockUser));
+    try {
+      const firebaseUser = await loginWithEmail(email, password);
+      const userData = await getCurrentUserData(firebaseUser.uid);
+      const mappedUser: User = {
+        id: firebaseUser.uid,
+        name: userData?.name || firebaseUser.displayName || email.split('@')[0],
+        email: firebaseUser.email || '',
+        avatarUrl:
+          userData?.avatarUrl ||
+          'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=120&h=120&fit=crop',
+      };
+      setUser(mappedUser);
+      localStorage.setItem('escolarapp_user', JSON.stringify(mappedUser));
+    } catch (error) {
+      console.error('[v0] Login failed:', error);
+      throw error;
+    }
   };
 
   const signup = async (name: string, email: string, password: string) => {
-    // Mock signup
-    const mockUser: User = {
-      id: 'user-' + Date.now(),
-      name,
-      email,
-      avatarUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=120&h=120&fit=crop',
-    };
-    setUser(mockUser);
-    localStorage.setItem('escolarapp_user', JSON.stringify(mockUser));
+    try {
+      const firebaseUser = await signupWithEmail(name, email, password);
+      const mappedUser: User = {
+        id: firebaseUser.uid,
+        name,
+        email,
+        avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+      };
+      setUser(mappedUser);
+      localStorage.setItem('escolarapp_user', JSON.stringify(mappedUser));
+    } catch (error) {
+      console.error('[v0] Signup failed:', error);
+      throw error;
+    }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('escolarapp_user');
+  const logout = async () => {
+    try {
+      await logoutUser();
+      setUser(null);
+      localStorage.removeItem('escolarapp_user');
+    } catch (error) {
+      console.error('[v0] Logout failed:', error);
+    }
   };
 
   const completeOnboarding = () => {
