@@ -1,8 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/services/firebase';
+import { supabase } from '@/lib/services/db';
 import {
   signupWithEmail,
   loginWithEmail,
@@ -34,7 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
 
-  // Initialize from Firebase Auth y localStorage
+  // Initialize from Supabase Auth
   useEffect(() => {
     const savedOnboarding = localStorage.getItem('escolarapp_onboarding');
 
@@ -42,34 +41,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setHasSeenOnboarding(true);
     }
 
-    // Si auth no está disponible, cargar solo desde localStorage
-    if (!auth) {
-      console.log('[v0] Firebase auth not available, using localStorage');
-      const savedUser = localStorage.getItem('escolarapp_user');
-      if (savedUser) {
-        setUser(JSON.parse(savedUser));
-      }
-      setIsLoading(false);
-      return;
-    }
-
-    // Escuchar cambios de autenticación en Firebase
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        // Usuario autenticado en Firebase
-        const userData = await getCurrentUserData(firebaseUser.uid);
+    // Listen to auth state changes in Supabase
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        // User is authenticated
+        const userData = await getCurrentUserData(session.user.id);
         const mappedUser: User = {
-          id: firebaseUser.uid,
-          name: userData?.name || firebaseUser.displayName || 'Usuario',
-          email: firebaseUser.email || '',
+          id: session.user.id,
+          name: userData?.name || session.user.email?.split('@')[0] || 'Usuario',
+          email: session.user.email || '',
           avatarUrl:
-            userData?.avatarUrl ||
+            userData?.avatar_url ||
             'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=120&h=120&fit=crop',
         };
         setUser(mappedUser);
         localStorage.setItem('escolarapp_user', JSON.stringify(mappedUser));
       } else {
-        // Usuario no autenticado
+        // User is not authenticated
         const savedUser = localStorage.getItem('escolarapp_user');
         if (savedUser) {
           setUser(JSON.parse(savedUser));
@@ -80,60 +70,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
-  const login = async (email: string, password: string) => {
+  async function login(email: string, password: string) {
     try {
-      const firebaseUser = await loginWithEmail(email, password);
-      const userData = await getCurrentUserData(firebaseUser.uid);
-      const mappedUser: User = {
-        id: firebaseUser.uid,
-        name: userData?.name || firebaseUser.displayName || email.split('@')[0],
-        email: firebaseUser.email || '',
-        avatarUrl:
-          userData?.avatarUrl ||
-          'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=120&h=120&fit=crop',
-      };
-      setUser(mappedUser);
-      localStorage.setItem('escolarapp_user', JSON.stringify(mappedUser));
+      setIsLoading(true);
+      await loginWithEmail(email, password);
     } catch (error) {
-      console.error('[v0] Login failed:', error);
+      console.error('[v0] Login error:', error);
       throw error;
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }
 
-  const signup = async (name: string, email: string, password: string) => {
+  async function signup(name: string, email: string, password: string) {
     try {
-      const firebaseUser = await signupWithEmail(name, email, password);
-      const mappedUser: User = {
-        id: firebaseUser.uid,
-        name,
-        email,
-        avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
-      };
-      setUser(mappedUser);
-      localStorage.setItem('escolarapp_user', JSON.stringify(mappedUser));
+      setIsLoading(true);
+      await signupWithEmail(name, email, password);
     } catch (error) {
-      console.error('[v0] Signup failed:', error);
+      console.error('[v0] Signup error:', error);
       throw error;
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }
 
-  const logout = async () => {
+  async function logout() {
     try {
+      setIsLoading(true);
       await logoutUser();
       setUser(null);
       localStorage.removeItem('escolarapp_user');
     } catch (error) {
-      console.error('[v0] Logout failed:', error);
+      console.error('[v0] Logout error:', error);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }
 
-  const completeOnboarding = () => {
-    setHasSeenOnboarding(true);
+  function completeOnboarding() {
     localStorage.setItem('escolarapp_onboarding', 'true');
-  };
+    setHasSeenOnboarding(true);
+  }
 
   return (
     <AuthContext.Provider
@@ -154,8 +136,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 }
