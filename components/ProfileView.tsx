@@ -30,10 +30,10 @@ export default function ProfileView() {
   const [userData, setUserData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Cargar datos del usuario desde Firebase
+  // Cargar datos del usuario desde la base de datos
   useEffect(() => {
     const loadUserData = async () => {
-      if (!user) return;
+      if (!user?.id) return;
 
       setIsLoading(true);
       try {
@@ -64,7 +64,7 @@ export default function ProfileView() {
     };
 
     loadUserData();
-  }, [user]);
+  }, [user?.id]); // ✅ Solo depende del ID del usuario, no del objeto completo
 
   const filteredProducts = userProducts.filter((p) => p.state === selectedFilter);
 
