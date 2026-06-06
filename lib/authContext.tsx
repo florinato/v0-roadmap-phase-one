@@ -32,8 +32,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
-  // Initialize from Supabase Auth
+  // Initialize from Supabase Auth - Only once on mount
   useEffect(() => {
     const savedOnboarding = localStorage.getItem('escolarapp_onboarding');
 
@@ -45,8 +46,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (isAuthenticating) return; // Prevent infinite loop
+
       if (session?.user) {
         // User is authenticated
+        setIsAuthenticating(true);
         const userData = await getCurrentUserData(session.user.id);
         const mappedUser: User = {
           id: session.user.id,
@@ -58,6 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         setUser(mappedUser);
         localStorage.setItem('escolarapp_user', JSON.stringify(mappedUser));
+        setIsAuthenticating(false);
       } else {
         // User is not authenticated
         const savedUser = localStorage.getItem('escolarapp_user');
