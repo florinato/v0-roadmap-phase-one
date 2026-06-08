@@ -1,9 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
 const DEFAULT_PRODUCT_IMAGES = {
@@ -14,7 +14,7 @@ const DEFAULT_PRODUCT_IMAGES = {
   tecnologia: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop',
 };
 
-export async function POST(request: NextRequest) {
+export async function POST(request) {
   try {
     // Get current user from auth header
     const authHeader = request.headers.get('authorization');
@@ -26,12 +26,12 @@ export async function POST(request: NextRequest) {
 
     // Parse form data
     const formData = await request.formData();
-    const name = formData.get('name') as string;
-    const description = formData.get('description') as string;
-    const price = parseFloat(formData.get('price') as string);
-    const category = formData.get('category') as string;
-    const state = formData.get('state') as string;
-    const imageFile = formData.get('image') as File | null;
+    const name = formData.get('name');
+    const description = formData.get('description');
+    const price = parseFloat(formData.get('price'));
+    const category = formData.get('category');
+    const state = formData.get('state');
+    const imageFile = formData.get('image');
 
     // Validate inputs
     if (!name || !description || !price || !category) {
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let imageUrl = null;
+    let imageUrl = DEFAULT_PRODUCT_IMAGES[category] || DEFAULT_PRODUCT_IMAGES.utiles;
 
     // Upload image if provided
     if (imageFile && imageFile.size > 0) {
@@ -51,18 +51,14 @@ export async function POST(request: NextRequest) {
         const buffer = await imageFile.arrayBuffer();
 
         // Upload to Supabase Storage
-        const { error: uploadError, data: uploadData } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('product-images')
           .upload(fileName, buffer, {
             contentType: imageFile.type,
             upsert: false,
           });
 
-        if (uploadError) {
-          console.error('[v0] Upload error:', uploadError);
-          // Si falla el upload, usar imagen predeterminada
-          imageUrl = DEFAULT_PRODUCT_IMAGES[category as keyof typeof DEFAULT_PRODUCT_IMAGES] || DEFAULT_PRODUCT_IMAGES.utiles;
-        } else {
+        if (!uploadError) {
           // Get public URL
           const { data } = supabase.storage
             .from('product-images')
@@ -72,11 +68,7 @@ export async function POST(request: NextRequest) {
       } catch (err) {
         console.error('[v0] Error uploading image:', err);
         // Fallback a imagen predeterminada
-        imageUrl = DEFAULT_PRODUCT_IMAGES[category as keyof typeof DEFAULT_PRODUCT_IMAGES] || DEFAULT_PRODUCT_IMAGES.utiles;
       }
-    } else {
-      // Use default image based on category
-      imageUrl = DEFAULT_PRODUCT_IMAGES[category as keyof typeof DEFAULT_PRODUCT_IMAGES] || DEFAULT_PRODUCT_IMAGES.utiles;
     }
 
     // Create product in database
