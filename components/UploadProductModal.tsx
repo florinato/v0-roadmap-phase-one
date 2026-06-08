@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { X } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
 
@@ -12,6 +12,7 @@ interface UploadProductModalProps {
 
 export default function UploadProductModal({ isOpen, onClose, onSuccess }: UploadProductModalProps) {
   const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -34,6 +35,10 @@ export default function UploadProductModal({ isOpen, onClose, onSuccess }: Uploa
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleImageClick = () => {
+    fileInputRef.current?.click();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -101,13 +106,24 @@ export default function UploadProductModal({ isOpen, onClose, onSuccess }: Uploa
           {/* Image Upload */}
           <div>
             <label className="block text-sm font-medium mb-2">Imagen</label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+            <div 
+              onClick={handleImageClick}
+              className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition"
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
+              />
               {preview ? (
-                <div className="relative">
+                <div className="relative inline-block">
                   <img src={preview} alt="Preview" className="w-full h-32 object-cover rounded" />
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setImage(null);
                       setPreview(null);
                     }}
@@ -117,18 +133,10 @@ export default function UploadProductModal({ isOpen, onClose, onSuccess }: Uploa
                   </button>
                 </div>
               ) : (
-                <label className="cursor-pointer">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="hidden"
-                  />
-                  <div className="text-gray-500">
-                    <p className="font-medium">Haz clic para seleccionar imagen</p>
-                    <p className="text-xs">PNG, JPG, GIF hasta 10MB</p>
-                  </div>
-                </label>
+                <div className="text-gray-500 py-4">
+                  <p className="font-medium">Haz clic para seleccionar imagen</p>
+                  <p className="text-xs">PNG, JPG, GIF hasta 10MB</p>
+                </div>
               )}
             </div>
           </div>
