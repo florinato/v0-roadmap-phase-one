@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { LogOut, Edit2 } from 'lucide-react';
+import { LogOut, Edit2, Plus } from 'lucide-react';
 import ProfileHeader from './ProfileHeader';
 import SegmentedControl from './SegmentedControl';
 import InventoryList from './InventoryList';
 import ReviewsList from './ReviewsList';
 import ReviewModal from './ReviewModal';
 import EditProfileModal from './EditProfileModal';
+import UploadProductModal from './UploadProductModal';
 import HistoryView from './HistoryView';
 import { useAuth } from '@/lib/authContext';
 import {
@@ -24,6 +25,7 @@ export default function ProfileView() {
   const [selectedFilter, setSelectedFilter] = useState<'active' | 'reserved' | 'sold'>('active');
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [userProducts, setUserProducts] = useState([]);
   const [userReviews, setUserReviews] = useState([]);
   const [userTransactions, setUserTransactions] = useState([]);
@@ -105,6 +107,13 @@ export default function ProfileView() {
           reviewsCount={displayReviewsCount}
         />
         <div className="flex gap-2">
+          <button
+            onClick={() => setIsUploadModalOpen(true)}
+            className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
+            aria-label="Subir artículo"
+          >
+            <Plus size={20} />
+          </button>
           <button
             onClick={() => setIsEditProfileOpen(true)}
             className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
@@ -194,6 +203,19 @@ export default function ProfileView() {
         isOpen={isEditProfileOpen}
         onClose={() => setIsEditProfileOpen(false)}
         onSave={handleSaveProfile}
+      />
+      <UploadProductModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        onSuccess={() => {
+          setIsUploadModalOpen(false);
+          // Recargar productos
+          if (user?.id) {
+            getUserProducts(user.id).then((products) => {
+              setUserProducts(products.length > 0 ? products : mockUserProducts);
+            });
+          }
+        }}
       />
     </div>
   );

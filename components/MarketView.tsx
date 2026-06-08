@@ -4,15 +4,7 @@ import { useState, useEffect } from 'react';
 import SearchBar from './SearchBar';
 import CategoryFilters from './CategoryFilters';
 import ProductCard from './ProductCard';
-import { getProducts } from '@/lib/services/db';
-
-interface Product {
-  id: string;
-  title: string;
-  price: number;
-  images: string[];
-  category: string;
-}
+import { getAllProducts, getProductsByCategory } from '@/lib/services/db';
 
 interface MarketViewProps {
   onProductTap?: (productId: string) => void;
@@ -21,16 +13,30 @@ interface MarketViewProps {
 export default function MarketView({ onProductTap }: MarketViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Cargar productos desde Firestore
+  // Cargar productos desde Supabase
   useEffect(() => {
     const loadProducts = async () => {
       setIsLoading(true);
       try {
-        const data = await getProducts();
-        setProducts(data);
+        if (selectedCategory === 'Todos') {
+          const data = await getAllProducts();
+          setProducts(data);
+        } else {
+          // Map category names to database values
+          const categoryMap: { [key: string]: string } = {
+            'Libros': 'libros',
+            'Uniformes': 'ropa',
+            'Mochilas': 'mochilas',
+            'Material': 'utiles',
+            'Electrónica': 'tecnologia',
+          };
+          const dbCategory = categoryMap[selectedCategory] || selectedCategory.toLowerCase();
+          const data = await getProductsByCategory(dbCategory);
+          setProducts(data);
+        }
       } catch (error) {
         console.error('[v0] Error loading products:', error);
         setProducts([]);
@@ -40,19 +46,10 @@ export default function MarketView({ onProductTap }: MarketViewProps) {
     };
 
     loadProducts();
-  }, []);
+  }, [selectedCategory]);
 
   const filteredProducts = products.filter((product) => {
-    const matchesSearch = product.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      selectedCategory === 'Todos' ||
-      (selectedCategory === 'Libros' && product.category === 'books') ||
-      (selectedCategory === 'Uniformes' && product.category === 'uniforms') ||
-      (selectedCategory === 'Mochilas' && product.category === 'bags') ||
-      (selectedCategory === 'Material' && product.category === 'supplies') ||
-      (selectedCategory === 'Electrónica' && product.category === 'tech');
-
-    return matchesSearch && matchesCategory;
+    return product.name.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   return (
@@ -72,9 +69,9 @@ export default function MarketView({ onProductTap }: MarketViewProps) {
             {filteredProducts.map((product) => (
               <ProductCard
                 key={product.id}
-                title={product.title}
+                title={product.name}
                 price={product.price}
-                image={product.images?.[0] || '/placeholder.png'}
+                image={product.image_url || '/placeholder.png'}
                 course={product.category}
                 onClick={() => onProductTap?.(product.id)}
               />
