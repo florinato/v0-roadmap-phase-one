@@ -3,12 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { X } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { getSessionToken } from '@/lib/services/db';
 
 interface UploadProductModalProps {
   isOpen: boolean;
@@ -55,11 +50,11 @@ export default function UploadProductModal({ isOpen, onClose, onSuccess }: Uploa
     setIsLoading(true);
 
     try {
-      // Get the current session to get the token
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      // Get the session token using the helper function
+      const token = await getSessionToken();
       
-      if (sessionError || !session) {
-        throw new Error('No session found');
+      if (!token) {
+        throw new Error('No authenticated session found');
       }
 
       const formDataToSend = new FormData();
@@ -76,7 +71,7 @@ export default function UploadProductModal({ isOpen, onClose, onSuccess }: Uploa
       const response = await fetch('/api/products/create', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: formDataToSend,
       });
