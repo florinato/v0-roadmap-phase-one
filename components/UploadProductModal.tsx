@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
 
@@ -12,7 +12,6 @@ interface UploadProductModalProps {
 
 export default function UploadProductModal({ isOpen, onClose, onSuccess }: UploadProductModalProps) {
   const { user } = useAuth();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -35,10 +34,6 @@ export default function UploadProductModal({ isOpen, onClose, onSuccess }: Uploa
       };
       reader.readAsDataURL(file);
     }
-  };
-
-  const handleImageClick = () => {
-    fileInputRef.current?.click();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -106,39 +101,42 @@ export default function UploadProductModal({ isOpen, onClose, onSuccess }: Uploa
           {/* Image Upload */}
           <div>
             <label className="block text-sm font-medium mb-2">Imagen</label>
-            <div 
-              onClick={handleImageClick}
-              className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition"
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="hidden"
-              />
-              {preview ? (
-                <div className="relative inline-block">
-                  <img src={preview} alt="Preview" className="w-full h-32 object-cover rounded" />
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setImage(null);
-                      setPreview(null);
-                    }}
-                    className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded"
-                  >
-                    <X size={16} />
-                  </button>
+            {preview ? (
+              <div className="relative">
+                <img src={preview} alt="Preview" className="w-full h-40 object-cover rounded" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImage(null);
+                    setPreview(null);
+                  }}
+                  className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded hover:bg-red-600"
+                >
+                  <X size={16} />
+                </button>
+                <label className="absolute inset-0 cursor-pointer rounded">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            ) : (
+              <label className="block w-full border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+                <div className="text-gray-500">
+                  <p className="font-medium text-lg">Haz clic para subir foto</p>
+                  <p className="text-sm">PNG, JPG, GIF hasta 10MB</p>
                 </div>
-              ) : (
-                <div className="text-gray-500 py-4">
-                  <p className="font-medium">Haz clic para seleccionar imagen</p>
-                  <p className="text-xs">PNG, JPG, GIF hasta 10MB</p>
-                </div>
-              )}
-            </div>
+              </label>
+            )}
           </div>
 
           {/* Name */}
