@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, Upload } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
 
 interface UploadProductModalProps {
@@ -12,6 +12,7 @@ interface UploadProductModalProps {
 
 export default function UploadProductModal({ isOpen, onClose, onSuccess }: UploadProductModalProps) {
   const { user } = useAuth();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -27,12 +28,20 @@ export default function UploadProductModal({ isOpen, onClose, onSuccess }: Uploa
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      console.log('[v0] Image selected:', file.name);
       setImage(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleUploadClick = () => {
+    console.log('[v0] Upload button clicked');
+    if (inputRef.current) {
+      inputRef.current.click();
     }
   };
 
@@ -101,8 +110,16 @@ export default function UploadProductModal({ isOpen, onClose, onSuccess }: Uploa
           {/* Image Upload */}
           <div>
             <label className="block text-sm font-medium mb-2">Imagen</label>
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="hidden"
+            />
+            
             {preview ? (
-              <div className="relative">
+              <div className="relative group">
                 <img src={preview} alt="Preview" className="w-full h-40 object-cover rounded" />
                 <button
                   type="button"
@@ -110,32 +127,26 @@ export default function UploadProductModal({ isOpen, onClose, onSuccess }: Uploa
                     setImage(null);
                     setPreview(null);
                   }}
-                  className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded hover:bg-red-600"
+                  className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded hover:bg-red-600 opacity-0 group-hover:opacity-100 transition"
                 >
                   <X size={16} />
                 </button>
-                <label className="absolute inset-0 cursor-pointer rounded">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="hidden"
-                  />
-                </label>
+                <button
+                  type="button"
+                  onClick={handleUploadClick}
+                  className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-30 rounded transition"
+                />
               </div>
             ) : (
-              <label className="block w-full border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
-                <div className="text-gray-500">
-                  <p className="font-medium text-lg">Haz clic para subir foto</p>
-                  <p className="text-sm">PNG, JPG, GIF hasta 10MB</p>
-                </div>
-              </label>
+              <button
+                type="button"
+                onClick={handleUploadClick}
+                className="w-full border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition flex flex-col items-center justify-center"
+              >
+                <Upload size={32} className="text-gray-400 mb-2" />
+                <p className="font-medium text-gray-700">Añade fotos del artículo</p>
+                <p className="text-sm text-gray-500">PNG, JPG, GIF hasta 10MB</p>
+              </button>
             )}
           </div>
 
