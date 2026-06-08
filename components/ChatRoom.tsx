@@ -1,11 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ChatHeaderV2 from './ChatHeaderV2';
 import MessageList from './MessageList';
 import InputBar from './InputBar';
 import TransactionConfirmModal from './TransactionConfirmModal';
-import { Message, mockProducts, mockCurrentUser } from '@/lib/mockData';
+import { useAuth } from '@/lib/authContext';
+import {
+  getProductById,
+  getConversationMessages,
+  sendMessage,
+  updateProductState,
+} from '@/lib/services/db';
+import { mockProducts } from '@/lib/mockData';
+
+interface Message {
+  id: string;
+  senderId: string;
+  text: string;
+  timestamp: Date;
+}
 
 interface ChatRoomProps {
   conversationId: string;
@@ -16,56 +30,96 @@ interface ChatRoomProps {
 
 export default function ChatRoom({
   productId,
+  conversationId,
   initialMessages,
   onBack,
 }: ChatRoomProps) {
+  const { user } = useAuth();
   const [messages, setMessages] = useState(initialMessages);
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [productState, setProductState] = useState<'active' | 'reserved' | 'sold'>('active');
+  const [product, setProduct] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const product = mockProducts.find((p) => p.id === productId);
-  const isCurrentUserSeller = product?.sellerId === mockCurrentUser.id;
+  // Cargar producto y mensajes desde Firebase
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        // Cargar producto
+        const productData = await getProductById(productId);
+        if (productData) {
+          setProduct(productData);
+          setProductState(productData.state);
+        } else {
+          // Fallback a mockData
+          const mockProduct = mockProducts.find((p) => p.id === productId);
+          if (mockProduct) {
+            setProduct(mockProduct);
+            setProductState(mockProduct.state);
+          }
+        }
 
-  const handleSendMessage = (text: string) => {
+        // Cargar mensajes
+        const messagesData = await getConversationMessages(conversationId);
+        if (messagesData.length > 0) {
+          setMessages(messagesData);
+        }
+      } catch (error) {
+        console.error('[v0] Error loading chat data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, [productId, conversationId]);
+
+  const isCurrentUserSeller = product?.sellerId === user?.id;
+
+  const handleSendMessage = async (text: string) => {
+    if (!user) return;
+
     const newMessage: Message = {
       id: `m${Date.now()}`,
-      senderType: 'user',
+      senderId: user.id,
       text,
       timestamp: new Date(),
     };
     setMessages([...messages, newMessage]);
 
-    // Simular respuesta después de 1 segundo
-    setTimeout(() => {
-      const responses = [
-        '¿Podemos hablar de reunirnos?',
-        'Genial, ¿cuándo te va bien?',
-        'Ok, te parece bien a las 5pm?',
-        'Perfecto, nos vemos entonces',
-      ];
-      const randomResponse =
-        responses[Math.floor(Math.random() * responses.length)];
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `m${Date.now()}`,
-          senderType: 'seller',
-          text: randomResponse,
-          timestamp: new Date(),
-        },
-      ]);
-    }, 1000);
+    try {
+      await sendMessage(conversationId, user.id, text);
+    } catch (error) {
+      console.error('[v0] Error sending message:', error);
+    }
   };
 
-  const handleConfirmReserved = () => {
-    setProductState('reserved');
-    console.log('[v0] Producto marcado como reservado');
+  const handleConfirmReserved = async () => {
+    try {
+      const success = await updateProductState(productId, 'reserved');
+      if (success) {
+        setProductState('reserved');
+      }
+    } catch (error) {
+      console.error('[v0] Error marking as reserved:', error);
+    }
   };
 
-  const handleConfirmSold = () => {
-    setProductState('sold');
-    console.log('[v0] Producto marcado como vendido');
+  const handleConfirmSold = async () => {
+    try {
+      const success = await updateProductState(productId, 'sold');
+      if (success) {
+        setProductState('sold');
+      }
+    } catch (error) {
+      console.error('[v0] Error marking as sold:', error);
+    }
   };
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-full">Cargando chat...</div>;
+  }
 
   if (!product) {
     return <div className="flex items-center justify-center h-full">Producto no encontrado</div>;
@@ -74,7 +128,7 @@ export default function ChatRoom({
   return (
     <div className="flex flex-col h-full bg-white">
       <ChatHeaderV2
-        productImage={product.imageUrl}
+        productImage={product.images?.[0] || product.imageUrl}
         productTitle={product.title}
         productPrice={product.price}
         productState={productState}
@@ -87,11 +141,10 @@ export default function ChatRoom({
       <MessageList messages={messages} />
       <InputBar onSendMessage={handleSendMessage} />
 
-      {/* Transaction Confirmation Modal */}
       <TransactionConfirmModal
         isOpen={isTransactionModalOpen}
         productTitle={product.title}
-        buyerName="Juan Pérez"
+        buyerName="Comprador"
         onConfirmReserved={handleConfirmReserved}
         onConfirmSold={handleConfirmSold}
         onCancel={() => setIsTransactionModalOpen(false)}

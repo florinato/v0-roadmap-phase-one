@@ -14,12 +14,13 @@ interface TransactionItem {
 }
 
 interface HistoryViewProps {
+  transactions?: TransactionItem[];
   onClose?: () => void;
 }
 
-export default function HistoryView({ onClose }: HistoryViewProps) {
-  // Mock transaction history based on user products
-  const transactionHistory: TransactionItem[] = [
+export default function HistoryView({ transactions = [], onClose }: HistoryViewProps) {
+  // Usar transacciones pasadas o mockData como fallback
+  const transactionHistory: TransactionItem[] = transactions.length > 0 ? transactions : [
     {
       id: 'th1',
       productTitle: 'Uniforme Talla S',

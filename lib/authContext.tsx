@@ -1,6 +1,13 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '@/lib/services/db';
+import {
+  signupWithEmail,
+  loginWithEmail,
+  logoutUser,
+  getCurrentUserData,
+} from '@/lib/services/db';
 
 interface User {
   id: string;
@@ -25,55 +32,95 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
-  // Initialize from localStorage
+  // Initialize from Supabase Auth - Only once on mount
   useEffect(() => {
-    const savedUser = localStorage.getItem('escolarapp_user');
     const savedOnboarding = localStorage.getItem('escolarapp_onboarding');
 
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
     if (savedOnboarding) {
       setHasSeenOnboarding(true);
     }
 
-    setIsLoading(false);
+    // Listen to auth state changes in Supabase
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (isAuthenticating) return; // Prevent infinite loop
+
+      if (session?.user) {
+        // User is authenticated
+        setIsAuthenticating(true);
+        const userData = await getCurrentUserData(session.user.id);
+        const mappedUser: User = {
+          id: session.user.id,
+          name: userData?.name || session.user.email?.split('@')[0] || 'Usuario',
+          email: session.user.email || '',
+          avatarUrl:
+            userData?.avatar_url ||
+            'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=120&h=120&fit=crop',
+        };
+        setUser(mappedUser);
+        localStorage.setItem('escolarapp_user', JSON.stringify(mappedUser));
+        setIsAuthenticating(false);
+      } else {
+        // User is not authenticated
+        const savedUser = localStorage.getItem('escolarapp_user');
+        if (savedUser) {
+          setUser(JSON.parse(savedUser));
+        } else {
+          setUser(null);
+        }
+      }
+      setIsLoading(false);
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
-  const login = async (email: string, password: string) => {
-    // Mock login - in real app, this would call an API
-    const mockUser: User = {
-      id: 'user-123',
-      name: email.split('@')[0],
-      email,
-      avatarUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=120&h=120&fit=crop',
-    };
-    setUser(mockUser);
-    localStorage.setItem('escolarapp_user', JSON.stringify(mockUser));
-  };
+  async function login(email: string, password: string) {
+    try {
+      setIsLoading(true);
+      await loginWithEmail(email, password);
+    } catch (error) {
+      console.error('[v0] Login error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
-  const signup = async (name: string, email: string, password: string) => {
-    // Mock signup
-    const mockUser: User = {
-      id: 'user-' + Date.now(),
-      name,
-      email,
-      avatarUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=120&h=120&fit=crop',
-    };
-    setUser(mockUser);
-    localStorage.setItem('escolarapp_user', JSON.stringify(mockUser));
-  };
+  async function signup(name: string, email: string, password: string) {
+    try {
+      setIsLoading(true);
+      await signupWithEmail(name, email, password);
+    } catch (error) {
+      console.error('[v0] Signup error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('escolarapp_user');
-  };
+  async function logout() {
+    try {
+      setIsLoading(true);
+      await logoutUser();
+      setUser(null);
+      localStorage.removeItem('escolarapp_user');
+    } catch (error) {
+      console.error('[v0] Logout error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
-  const completeOnboarding = () => {
-    setHasSeenOnboarding(true);
+  function completeOnboarding() {
     localStorage.setItem('escolarapp_onboarding', 'true');
-  };
+    setHasSeenOnboarding(true);
+  }
 
   return (
     <AuthContext.Provider
@@ -94,8 +141,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 }
