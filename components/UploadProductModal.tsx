@@ -21,6 +21,20 @@ export default function UploadProductModal({ isOpen, onClose, onSuccess }: Uploa
   });
   const [image, setImage] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,6 +97,41 @@ export default function UploadProductModal({ isOpen, onClose, onSuccess }: Uploa
               {error}
             </div>
           )}
+
+          {/* Image Upload */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Imagen</label>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+              {preview ? (
+                <div className="relative">
+                  <img src={preview} alt="Preview" className="w-full h-32 object-cover rounded" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImage(null);
+                      setPreview(null);
+                    }}
+                    className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ) : (
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                  <div className="text-gray-500">
+                    <p className="font-medium">Haz clic para seleccionar imagen</p>
+                    <p className="text-xs">PNG, JPG, GIF hasta 10MB</p>
+                  </div>
+                </label>
+              )}
+            </div>
+          </div>
 
           {/* Name */}
           <div>

@@ -16,7 +16,7 @@ const DEFAULT_PRODUCT_IMAGES = {
 
 export async function POST(request: NextRequest) {
   try {
-    // Get current user from Supabase
+    // Get current user from auth header
     const authHeader = request.headers.get('authorization');
     const userId = authHeader?.replace('Bearer ', '');
 
@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
     const price = parseFloat(formData.get('price') as string);
     const category = formData.get('category') as string;
     const state = formData.get('state') as string;
+    const imageFile = formData.get('image') as File | null;
 
     // Validate inputs
     if (!name || !description || !price || !category) {
@@ -40,9 +41,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use default image based on category
-    const imageUrl = DEFAULT_PRODUCT_IMAGES[category as keyof typeof DEFAULT_PRODUCT_IMAGES] || 
-                     DEFAULT_PRODUCT_IMAGES.utiles;
+    let imageUrl = null;
+
+    // Upload image if provided
+    if (imageFile && imageFile.size > 0) {
+      try {
+        const timestamp = Date.now();
+        const fileName = `${userId}/${timestamp}-${imageFile.name}`;
+        const buffer = await imageFile.arrayBuffer();
+
+        // Upload to Supabase Storage
+        const { error: uploadError, data: uploadData } = await supabase.storage
+          .from('product-images')
+          .upload(fileName, buffer, {
+            contentType: imageFile.type,
+            upsert: false,
+          });
+
+        if (uploadError) {
+          console.error('[v0] Upload error:', uploadError);
+          // Si falla el upload, usar imagen predeterminada
+          imageUrl = DEFAULT_PRODUCT_IMAGES[category as keyof typeof DEFAULT_PRODUCT_IMAGES] || DEFAULT_PRODUCT_IMAGES.utiles;
+        } else {
+          // Get public URL
+          const { data } = supabase.storage
+            .from('product-images')
+            .getPublicUrl(fileName);
+          imageUrl = data.publicUrl;
+        }
+      } catch (err) {
+        console.error('[v0] Error uploading image:', err);
+        // Fallback a imagen predeterminada
+        imageUrl = DEFAULT_PRODUCT_IMAGES[category as keyof typeof DEFAULT_PRODUCT_IMAGES] || DEFAULT_PRODUCT_IMAGES.utiles;
+      }
+    } else {
+      // Use default image based on category
+      imageUrl = DEFAULT_PRODUCT_IMAGES[category as keyof typeof DEFAULT_PRODUCT_IMAGES] || DEFAULT_PRODUCT_IMAGES.utiles;
+    }
 
     // Create product in database
     const { data, error } = await supabase
