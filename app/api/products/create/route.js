@@ -3,24 +3,24 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+
+const DEFAULT_PRODUCT_IMAGES = {
+  libros: 'https://images.unsplash.com/photo-1507842217343-583f20270319?w=400&h=400&fit=crop',
+  ropa: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=400&fit=crop',
+  mochilas: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=400&fit=crop',
+  utiles: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400&h=400&fit=crop',
+  tecnologia: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop',
+};
 
 export async function POST(request: NextRequest) {
   try {
-    // Get auth user from request header
+    // Get current user from Supabase
     const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const userId = authHeader?.replace('Bearer ', '');
 
-    // Get current user from Supabase Auth
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
-
-    if (authError || !user) {
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -31,7 +31,6 @@ export async function POST(request: NextRequest) {
     const price = parseFloat(formData.get('price') as string);
     const category = formData.get('category') as string;
     const state = formData.get('state') as string;
-    const imageFile = formData.get('image') as File | null;
 
     // Validate inputs
     if (!name || !description || !price || !category) {
@@ -41,41 +40,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let imageUrl = null;
-
-    // Upload image if provided
-    if (imageFile) {
-      const timestamp = Date.now();
-      const fileName = `${user.id}/${timestamp}-${imageFile.name}`;
-      const buffer = await imageFile.arrayBuffer();
-
-      const { error: uploadError, data: uploadData } = await supabase.storage
-        .from('product-images')
-        .upload(fileName, buffer, {
-          contentType: imageFile.type,
-        });
-
-      if (uploadError) {
-        console.error('[v0] Image upload error:', uploadError);
-        return NextResponse.json(
-          { error: 'Failed to upload image' },
-          { status: 400 }
-        );
-      }
-
-      // Get public URL
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('product-images').getPublicUrl(fileName);
-
-      imageUrl = publicUrl;
-    }
+    // Use default image based on category
+    const imageUrl = DEFAULT_PRODUCT_IMAGES[category as keyof typeof DEFAULT_PRODUCT_IMAGES] || 
+                     DEFAULT_PRODUCT_IMAGES.utiles;
 
     // Create product in database
     const { data, error } = await supabase
       .from('products')
       .insert({
-        seller_id: user.id,
+        seller_id: userId,
         name,
         description,
         price,
