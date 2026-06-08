@@ -16,11 +16,31 @@ const DEFAULT_PRODUCT_IMAGES = {
 
 export async function POST(request) {
   try {
-    // Get current user from auth header
+    // Get the token from auth header
     const authHeader = request.headers.get('authorization');
-    const userId = authHeader?.replace('Bearer ', '');
+    const token = authHeader?.replace('Bearer ', '');
 
-    if (!userId) {
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Create a Supabase client with the user's token to verify auth
+    const userSupabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      }
+    );
+
+    // Verify the user is authenticated
+    const { data: { user }, error: authError } = await userSupabase.auth.getUser();
+
+    if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -47,11 +67,11 @@ export async function POST(request) {
     if (imageFile && imageFile.size > 0) {
       try {
         const timestamp = Date.now();
-        const fileName = `${userId}/${timestamp}-${imageFile.name}`;
+        const fileName = `${user.id}/${timestamp}-${imageFile.name}`;
         const buffer = await imageFile.arrayBuffer();
 
         // Upload to Supabase Storage
-        const { error: uploadError } = await supabase.storage
+        const { error: uploadError } = await userSupabase.storage
           .from('product-images')
           .upload(fileName, buffer, {
             contentType: imageFile.type,
@@ -60,7 +80,7 @@ export async function POST(request) {
 
         if (!uploadError) {
           // Get public URL
-          const { data } = supabase.storage
+          const { data } = userSupabase.storage
             .from('product-images')
             .getPublicUrl(fileName);
           imageUrl = data.publicUrl;
@@ -71,11 +91,11 @@ export async function POST(request) {
       }
     }
 
-    // Create product in database
-    const { data, error } = await supabase
+    // Create product in database using the authenticated user's token
+    const { data, error } = await userSupabase
       .from('products')
       .insert({
-        seller_id: userId,
+        seller_id: user.id,
         name,
         description,
         price,
@@ -89,7 +109,7 @@ export async function POST(request) {
     if (error) {
       console.error('[v0] Product creation error:', error);
       return NextResponse.json(
-        { error: 'Failed to create product' },
+        { error: error.message || 'Failed to create product' },
         { status: 400 }
       );
     }

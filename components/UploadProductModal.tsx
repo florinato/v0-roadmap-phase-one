@@ -1,8 +1,14 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { X, Upload } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 interface UploadProductModalProps {
   isOpen: boolean;
@@ -28,12 +34,70 @@ export default function UploadProductModal({ isOpen, onClose, onSuccess }: Uploa
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      console.log('[v0] Image selected:', file.name);
       setImage(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreview(reader.result as string);
       };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleUploadClick = () => {
+    if (inputRef.current) {
+      inputRef.current.click();
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      // Get the current session to get the token
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        throw new Error('No session found');
+      }
+
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('price', formData.price);
+      formDataToSend.append('category', formData.category);
+      formDataToSend.append('state', formData.state);
+      
+      if (image) {
+        formDataToSend.append('image', image);
+      }
+
+      const response = await fetch('/api/products/create', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: formDataToSend,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al subir el artículo');
+      }
+
+      setFormData({ name: '', description: '', price: '', category: 'libros', state: 'perfecto' });
+      setImage(null);
+      setPreview(null);
+      onSuccess();
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error desconocido');
+    } finally {
+      setIsLoading(false);
+    }
+  };
       reader.readAsDataURL(file);
     }
   };
