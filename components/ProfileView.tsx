@@ -1,96 +1,193 @@
+
 'use client';
 
-import { useState, useEffect } from 'react';
-import { LogOut, Edit2, Plus } from 'lucide-react';
-import ProfileHeader from './ProfileHeader';
-import SegmentedControl from './SegmentedControl';
-import InventoryList from './InventoryList';
-import ReviewsList from './ReviewsList';
-import ReviewModal from './ReviewModal';
-import EditProfileModal from './EditProfileModal';
-import UploadProductModal from './UploadProductModal';
-import HistoryView from './HistoryView';
 import { useAuth } from '@/lib/authContext';
-import {
-  getUserProducts,
-  getUserReviews,
-  getUserTransactions,
-  getCurrentUserData,
-} from '@/lib/services/db';
-import { mockCurrentUser, mockUserProducts, mockUserReviews } from '@/lib/mockData';
+import { supabase } from '@/lib/supabase'; // Importar supabase
+import { Edit2, LogOut, Plus } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import EditProfileModal from './EditProfileModal';
+import HistoryView from './HistoryView';
+import InventoryList from './InventoryList';
+import ProfileHeader from './ProfileHeader';
+import ReviewModal from './ReviewModal';
+import ReviewsList from './ReviewsList';
+import SegmentedControl from './SegmentedControl';
+import UploadProductModal from './UploadProductModal';
 
 export default function ProfileView() {
   const { logout, user } = useAuth();
   const [selectedTab, setSelectedTab] = useState<'inventory' | 'reviews' | 'history'>('inventory');
-  const [selectedFilter, setSelectedFilter] = useState<'active' | 'reserved' | 'sold'>('active');
+  const [selectedFilter, setSelectedFilter] = useState<'en_venta' | 'reservado' | 'vendido'>('en_venta'); // Cambiado a 'en_venta'
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [userProducts, setUserProducts] = useState([]);
-  const [userReviews, setUserReviews] = useState([]);
-  const [userTransactions, setUserTransactions] = useState([]);
-  const [userData, setUserData] = useState(null);
+  const [userProducts, setUserProducts] = useState<any[]>([]);
+  const [userReviews, setUserReviews] = useState<any[]>([]);
+  const [userTransactions, setUserTransactions] = useState<any[]>([]); // Se inicializa como array vacío
+  const [userData, setUserData] = useState<any>(null); // Usar any para simplificar, idealmente definir UserData
   const [isLoading, setIsLoading] = useState(true);
 
   // Cargar datos del usuario desde la base de datos
   useEffect(() => {
     const loadUserData = async () => {
-      if (!user?.id) return;
+      if (!user?.id) {
+        setIsLoading(false);
+        return;
+      }
 
       setIsLoading(true);
       try {
         // Cargar datos del usuario
-        const currentUserData = await getCurrentUserData(user.id);
-        setUserData(currentUserData || { name: user.name, rating: 5.0, reviewsCount: 0 });
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, name, bio, avatar_url, rating, reviews_count')
+          .eq('id', user.id)
+          .single();
 
-        // Cargar productos del usuario
-        const products = await getUserProducts(user.id);
-        setUserProducts(products.length > 0 ? products : mockUserProducts);
+        if (profileError && profileError.code !== 'PGRST116') {
+          console.error('[v0] Error fetching profile data:', profileError);
+        }
+
+        setUserData({
+          id: profileData?.id || user?.id || '',
+          name: profileData?.name || user?.user_metadata?.full_name || '',
+          rating: profileData?.rating || 5.0,
+          reviewsCount: profileData?.reviews_count || 0,
+          avatar_url: profileData?.avatar_url || user?.user_metadata?.avatar_url || '',
+          bio: profileData?.bio || '',
+        });
+
+        // Cargar productos del usuario filtrados por el estado seleccionado
+        const { data: products, error: productsError } = await supabase
+          .from('products')
+          .select('id, name, description, price, image_url, category, seller_id, created_at, state')
+          .eq('seller_id', user!.id)
+          .eq('state', selectedFilter); // Filtrar por el estado seleccionado
+        if (productsError) throw new Error(productsError.message || 'Error al cargar los productos del usuario');
+        setUserProducts(products || []);
 
         // Cargar reseñas del usuario
-        const reviews = await getUserReviews(user.id);
-        setUserReviews(reviews.length > 0 ? reviews : mockUserReviews);
+        const { data: reviews, error: reviewsError } = await supabase
+          .from('reviews')
+          .select('*, reviewer:reviewer_id(name, avatar_url)') // Corregido: reviewer es el alias, reviewer_id es la FK
+          .eq('reviewed_user_id', user.id); // reviewed_user_id es el usuario reseñado
+        if (reviewsError) throw new Error(reviewsError.message || 'Error al cargar las reseñas del usuario');
+        setUserReviews(reviews || []);
 
-        // Cargar transacciones del usuario
-        const transactions = await getUserTransactions(user.id);
-        setUserTransactions(transactions);
+        // Eliminar la carga de transacciones, ya que la tabla fue eliminada
+        // const { data: transactions, error: transactionsError } = await supabase
+        //   .from('transactions')
+        //   .select('id, product_id, buyer_id, seller_id, amount, type, status, created_at, updated_at, completed_at')
+        //   .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`);
+        // if (transactionsError) throw new Error(transactionsError.message || 'Error al cargar las transacciones del usuario');
+        // setUserTransactions(transactions || []);
+        setUserTransactions([]); // Se inicializa como array vacío
+
       } catch (error) {
         console.error('[v0] Error loading user data:', error);
-        // Fallback a mockData
-        setUserData(mockCurrentUser);
-        setUserProducts(mockUserProducts);
-        setUserReviews(mockUserReviews);
+
       } finally {
         setIsLoading(false);
       }
     };
 
     loadUserData();
-  }, [user?.id]); // ✅ Solo depende del ID del usuario, no del objeto completo
+  }, [user?.id, selectedFilter]); // Añadir selectedFilter a las dependencias del useEffect
 
-  const filteredProducts = userProducts.filter((p) => p.state === selectedFilter);
+  // filteredProducts ya está haciendo el filtro, pero la carga inicial también debe hacerlo
+  // const filteredProducts = userProducts.filter((p: any) => p.state === selectedFilter);
+  // Ahora userProducts ya contendrá los productos filtrados por selectedFilter
+  const filteredProducts = userProducts;
 
   const handleSubmitReview = async (rating: number, comment: string) => {
-    console.log('[v0] Nueva reseña:', { rating, comment });
-    // TODO: Implementar guardado en Firebase
+    if (!user?.id) return;
+    try {
+      const { error } = await supabase.from('reviews').insert({
+        reviewed_user_id: user.id, // reviewed_user_id es el usuario reseñado
+        reviewer_id: user.id, // reviewer_id es el autor de la reseña
+        rating,
+        comment,
+      });
+      if (error) throw error;
+      console.log('[v0] Reseña guardada con éxito');
+      setIsReviewModalOpen(false);
+      // Recargar reseñas
+      const { data: reviews, error: reviewsError } = await supabase
+        .from('reviews')
+        .select('*, reviewer:reviewer_id(name, avatar_url)') // Corregido: reviewer es el alias, reviewer_id es la FK
+        .eq('reviewed_user_id', user.id);
+      if (reviewsError) throw new Error(reviewsError.message || 'Error al recargar las reseñas');
+      setUserReviews(reviews || []);
+    } catch (error) {
+      console.error('[v0] Error al guardar reseña:', error);
+    }
   };
 
   const handleEditProduct = (id: string) => {
     console.log('[v0] Editar producto:', id);
+    // TODO: Implementar navegación a edición o modal de edición
   };
 
-  const handleDeleteProduct = (id: string) => {
-    console.log('[v0] Eliminar producto:', id);
+  const handleDeleteProduct = async (id: string) => {
+    if (!user?.id) return;
+    try {
+      const { error } = await supabase.from('products').delete().eq('id', id);
+      if (error) throw error;
+      console.log('[v0] Producto eliminado:', id);
+      // Recargar productos
+      if (user?.id) {
+        supabase
+          .from('products')
+          .select('id, name, description, price, image_url, category, seller_id, created_at, state')
+          .eq('seller_id', user.id)
+          .eq('state', selectedFilter) // Filtrar por el estado seleccionado
+          .then(({ data, error }) => {
+            if (error) console.error('[v0] Error reloading products after delete:', error);
+            setUserProducts(data || []);
+          });
+      }
+    } catch (error) {
+      console.error('[v0] Error al eliminar producto:', error);
+    }
   };
 
-  const handleSaveProfile = async (data: { name: string; bio: string }) => {
-    console.log('[v0] Perfil actualizado:', data);
-    // TODO: Implementar update en Firebase
+  const handleSaveProfile = async (data: { name: string; bio: string; avatarFile?: File | null }) => {
+    if (!user?.id) return;
+    let avatarUrl = userData?.avatar_url || null;
+
+    try {
+      if (data.avatarFile) {
+        const file = data.avatarFile;
+        const filePath = `avatars/${user.id}/${Date.now()}-${file.name}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('product-images') // Usamos el bucket de product-images según especificaciones
+          .upload(filePath, file, { cacheControl: '3600', upsert: true });
+
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(filePath);
+        avatarUrl = publicUrlData.publicUrl;
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ name: data.name, bio: data.bio, avatar_url: avatarUrl })
+        .eq('id', user.id);
+      if (error) throw error;
+      console.log('[v0] Perfil actualizado:', data);
+      // Actualizar el estado local
+      setUserData((prev: any) => ({ ...prev, name: data.name, bio: data.bio, avatar_url: avatarUrl }));
+      setIsEditProfileOpen(false);
+    } catch (error) {
+      console.error('[v0] Error al actualizar perfil:', error);
+    }
   };
 
-  const displayName = userData?.name || user?.name || 'Usuario';
+  const displayName = userData?.name || user?.user_metadata?.full_name || 'Usuario';
   const displayRating = userData?.rating || 5.0;
-  const displayReviewsCount = userData?.reviewsCount || 0;
+  const displayReviewsCount = userReviews.length;
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-full">Cargando perfil...</div>;
@@ -102,7 +199,7 @@ export default function ProfileView() {
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <ProfileHeader
           name={displayName}
-          avatarUrl={user?.avatarUrl || 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=120&h=120&fit=crop'}
+          avatarUrl={userData?.avatar_url || user?.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=120&h=120&fit=crop'}
           rating={displayRating}
           reviewsCount={displayReviewsCount}
         />
@@ -169,7 +266,15 @@ export default function ProfileView() {
       <div className="flex-1 overflow-y-auto">
         {selectedTab === 'inventory' ? (
           <>
-            <SegmentedControl selectedFilter={selectedFilter} onFilterChange={setSelectedFilter} />
+            <SegmentedControl 
+              selectedFilter={selectedFilter} 
+              onFilterChange={setSelectedFilter} 
+              options={[
+                { label: 'En Venta', value: 'en_venta' },
+                { label: 'Reservados', value: 'reservado' },
+                { label: 'Vendidos', value: 'vendido' },
+              ]} 
+            />
             <InventoryList
               items={filteredProducts}
               onEdit={handleEditProduct}
@@ -203,6 +308,11 @@ export default function ProfileView() {
         isOpen={isEditProfileOpen}
         onClose={() => setIsEditProfileOpen(false)}
         onSave={handleSaveProfile}
+        initialData={{
+          name: userData?.name || '',
+          bio: userData?.bio || '',
+          avatar_url: userData?.avatar_url || '',
+        }}
       />
       <UploadProductModal
         isOpen={isUploadModalOpen}
@@ -211,9 +321,15 @@ export default function ProfileView() {
           setIsUploadModalOpen(false);
           // Recargar productos
           if (user?.id) {
-            getUserProducts(user.id).then((products) => {
-              setUserProducts(products.length > 0 ? products : mockUserProducts);
-            });
+            supabase
+              .from('products')
+              .select('id, name, description, price, image_url, category, seller_id, created_at, state')
+              .eq('seller_id', user.id)
+              .eq('state', selectedFilter) // Filtrar por el estado seleccionado
+              .then(({ data, error }) => {
+                if (error) console.error('[v0] Error reloading products after upload:', error);
+                setUserProducts(data || []);
+              });
           }
         }}
       />

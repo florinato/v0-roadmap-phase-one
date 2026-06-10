@@ -1,9 +1,11 @@
+
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { X } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
-import { getSessionToken } from '@/lib/services/db';
+import { supabase } from '@/lib/supabase'; // Importar supabase
+import { X } from 'lucide-react';
+import { useRouter } from 'next/navigation'; // Importar useRouter
+import React, { useRef, useState } from 'react';
 
 interface UploadProductModalProps {
   isOpen: boolean;
@@ -14,12 +16,13 @@ interface UploadProductModalProps {
 export default function UploadProductModal({ isOpen, onClose, onSuccess }: UploadProductModalProps) {
   const { user } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter(); // Inicializar router
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: '',
     category: 'libros',
-    state: 'perfecto',
+    state: 'en_venta',
   });
   const [image, setImage] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -49,42 +52,56 @@ export default function UploadProductModal({ isOpen, onClose, onSuccess }: Uploa
     setError(null);
     setIsLoading(true);
 
+    if (!user?.id) {
+      setError('Usuario no autenticado');
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      // Get the session token using the helper function
-      const token = await getSessionToken();
-      
-      if (!token) {
-        throw new Error('No authenticated session found');
-      }
+      let imageUrl: string | null = null;
 
-      const formDataToSend = new FormData();
-      formDataToSend.append('name', formData.name);
-      formDataToSend.append('description', formData.description);
-      formDataToSend.append('price', formData.price);
-      formDataToSend.append('category', formData.category);
-      formDataToSend.append('state', formData.state);
-      
       if (image) {
-        formDataToSend.append('image', image);
+        const fileExtension = image.name.split('.').pop();
+        const fileName = `${user.id}/${Date.now()}.${fileExtension}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('product-images') // Coincide con el nombre del bucket en Supabase
+          .upload(fileName, image, {
+            cacheControl: '3600',
+            upsert: false,
+          });
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(fileName);
+
+        imageUrl = publicUrlData.publicUrl;
       }
 
-      const response = await fetch('/api/products/create', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
+      const { data, error: insertError } = await supabase.from('products').insert([
+        {
+          seller_id: user.id, // CAMBIO: user_id a seller_id
+          name: formData.name,
+          description: formData.description,
+          price: parseFloat(formData.price),
+          category: formData.category,
+          state: 'en_venta',
+          image_url: imageUrl,
         },
-        body: formDataToSend,
-      });
+      ]);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al subir el artículo');
+      if (insertError) {
+        throw insertError;
       }
 
-      setFormData({ name: '', description: '', price: '', category: 'libros', state: 'perfecto' });
+      setFormData({ name: '', description: '', price: '', category: 'libros', state: 'en_venta' });
       setImage(null);
       setPreview(null);
+      router.push('/profile'); // Redirigir a /profile
       onSuccess();
       onClose();
     } catch (err) {

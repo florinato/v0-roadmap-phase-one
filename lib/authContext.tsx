@@ -1,15 +1,11 @@
+
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '@/lib/services/db';
-import {
-  signupWithEmail,
-  loginWithEmail,
-  logoutUser,
-  getCurrentUserData,
-} from '@/lib/services/db';
+import { supabase } from '@/lib/supabase';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 interface User {
+  user_metadata: any;
   id: string;
   name: string;
   email: string;
@@ -20,7 +16,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string, name: string) => Promise<void>;
   logout: () => void;
   hasSeenOnboarding: boolean;
   completeOnboarding: () => void;
@@ -45,20 +41,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen to auth state changes in Supabase
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
       if (isAuthenticating) return; // Prevent infinite loop
 
       if (session?.user) {
         // User is authenticated
         setIsAuthenticating(true);
-        const userData = await getCurrentUserData(session.user.id);
+        const { data: userData, error: userError } = await supabase
+          .from('profiles') // Cambiado de 'users' a 'profiles'
+          .select('name, avatar_url')
+          .eq('id', session.user.id)
+          .single();
+
+        if (userError && userError.code !== 'PGRST116') { // PGRST116 means no rows found
+          console.error('[v0] Error fetching user data:', userError);
+        }
+
         const mappedUser: User = {
           id: session.user.id,
           name: userData?.name || session.user.email?.split('@')[0] || 'Usuario',
           email: session.user.email || '',
-          avatarUrl:
-            userData?.avatar_url ||
+          avatarUrl: userData?.avatar_url ||
             'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=120&h=120&fit=crop',
+          user_metadata: undefined
         };
         setUser(mappedUser);
         localStorage.setItem('escolarapp_user', JSON.stringify(mappedUser));
@@ -83,21 +88,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function login(email: string, password: string) {
     try {
       setIsLoading(true);
-      await loginWithEmail(email, password);
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
     } catch (error) {
       console.error('[v0] Login error:', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  async function signup(name: string, email: string, password: string) {
-    try {
-      setIsLoading(true);
-      await signupWithEmail(name, email, password);
-    } catch (error) {
-      console.error('[v0] Signup error:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -107,7 +101,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function logout() {
     try {
       setIsLoading(true);
-      await logoutUser();
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
       setUser(null);
       localStorage.removeItem('escolarapp_user');
     } catch (error) {
@@ -117,8 +112,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  async function signup(email: string, password: string, name: string) {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      console.log("[v0] Supabase signup response data:", data);
+      if (error) throw error;
+      // La inserción manual en la tabla 'users' ha sido eliminada. El perfil se crea automáticamente mediante un Trigger de base de datos.
+    } catch (error) {
+      console.error("[v0] Signup error:", error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   function completeOnboarding() {
-    localStorage.setItem('escolarapp_onboarding', 'true');
+    localStorage.setItem("escolarapp_onboarding", "true");
     setHasSeenOnboarding(true);
   }
 

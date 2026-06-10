@@ -1,3 +1,4 @@
+
 'use client';
 
 import { MoreVertical } from 'lucide-react';
@@ -7,7 +8,7 @@ interface InventoryItem {
   id: string;
   title: string;
   price: number;
-  imageUrl: string;
+  image_url: string; // CAMBIO: imageUrl a image_url
   condition: string;
   state: 'active' | 'reserved' | 'sold';
   interestedBuyers: number;
@@ -40,9 +41,9 @@ export default function InventoryList({
         <div key={item.id} className="flex gap-3 p-4 hover:bg-gray-50 transition-colors">
           {/* Image */}
           <img
-            src={item.imageUrl}
+            src={item.image_url} // CAMBIO: imageUrl a image_url
             alt={item.title}
-            className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
+            className="w-20 h-20 rounded-lg object-cover shrink-0"
           />
 
           {/* Content */}

@@ -1,20 +1,34 @@
+
 'use client';
 
-import { useState } from 'react';
 import { X } from 'lucide-react';
-import { mockCurrentUser } from '@/lib/mockData';
+import React, { useEffect, useState } from 'react'; // Importar useEffect aquí también
 
 interface EditProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: { name: string; bio: string }) => void;
+  onSave: (data: { name: string; bio: string; avatarFile?: File | null }) => void;
+  initialData?: { name: string; bio: string; avatar_url?: string; }; // Añadido initialData
 }
 
-export default function EditProfileModal({ isOpen, onClose, onSave }: EditProfileModalProps) {
+export default function EditProfileModal({ isOpen, onClose, onSave, initialData }: EditProfileModalProps) {
   const [formData, setFormData] = useState({
-    name: mockCurrentUser.name,
-    bio: 'Estudiante responsable. Vendo mis cosas de escuela en buen estado.',
+    name: initialData?.name || '', // Usar initialData
+    bio: initialData?.bio || '', // Usar initialData
   });
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(initialData?.avatar_url || null);
+
+  // Actualizar formData y avatarPreview cuando initialData cambie
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        name: initialData.name || '',
+        bio: initialData.bio || '',
+      });
+      setAvatarPreview(initialData.avatar_url || null);
+    }
+  }, [initialData]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -24,8 +38,16 @@ export default function EditProfileModal({ isOpen, onClose, onSave }: EditProfil
     }));
   };
 
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setAvatarFile(file);
+      setAvatarPreview(URL.createObjectURL(file));
+    }
+  };
+
   const handleSubmit = () => {
-    onSave(formData);
+    onSave({ ...formData, avatarFile });
     onClose();
   };
 
@@ -48,6 +70,27 @@ export default function EditProfileModal({ isOpen, onClose, onSave }: EditProfil
 
         {/* Form */}
         <div className="flex flex-col gap-4">
+          {/* Avatar */}
+          <div className="flex flex-col items-center gap-2">
+            <label className="text-sm font-semibold text-gray-900">Avatar</label>
+            <div className="relative w-24 h-24 rounded-full overflow-hidden border border-gray-300">
+              {avatarPreview ? (
+                <img src={avatarPreview} alt="Avatar Preview" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500 text-xs">
+                  No Avatar
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                className="absolute inset-0 opacity-0 cursor-pointer"
+              />
+            </div>
+            <span className="text-xs text-gray-500">Click para cambiar avatar</span>
+          </div>
+
           {/* Name */}
           <div className="flex flex-col gap-2">
             <label className="text-sm font-semibold text-gray-900">Nombre</label>

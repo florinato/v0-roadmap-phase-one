@@ -31,7 +31,7 @@ export default function ChatHeader({
     sold: { label: 'Vendido', color: 'bg-red-100 text-red-700' },
   };
 
-  const state = stateConfig[productState];
+  const state = stateConfig[productState] || { label: 'Desconocido', color: 'bg-gray-100 text-gray-700' };
 
   return (
     <div className="bg-white border-b border-gray-200 p-4">

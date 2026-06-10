@@ -1,3 +1,4 @@
+
 'use client';
 
 import { ArrowLeft, Star } from 'lucide-react';
@@ -6,10 +7,10 @@ interface Product {
   id: string;
   title: string;
   price: number;
-  imageUrl: string;
+  image_url: string; // CAMBIO: imageUrl a image_url
   condition: string;
   course: string;
-  state: 'active' | 'reserved' | 'sold';
+  state: 'en_venta' | 'reservado' | 'vendido'; // Actualizar posibles estados
   description?: string;
   sellerId: string;
 }
@@ -35,14 +36,13 @@ export default function ProductDetail({
   onClose,
   onContact,
 }: ProductDetailProps) {
-  const isDisabled = product.state === 'reserved' || product.state === 'sold';
-
+  // Ya no necesitamos isDisabled global, la lógica de visibilidad y estado se maneja directamente en el JSX
   return (
     <div className="fixed inset-0 bg-white z-50 flex flex-col max-w-md mx-auto">
       {/* Image Gallery Header */}
       <div className="relative w-full bg-gray-100 aspect-square flex items-center justify-center overflow-hidden">
         <img
-          src={product.imageUrl}
+          src={product.image_url} // CAMBIO: imageUrl a image_url
           alt={product.title}
           className="w-full h-full object-cover"
         />
@@ -110,17 +110,31 @@ export default function ProductDetail({
 
       {/* Sticky Contact Button */}
       <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-200 p-4">
-        <button
-          onClick={onContact}
-          disabled={isDisabled}
-          className={`w-full py-4 rounded-lg font-semibold text-lg transition-colors ${
-            isDisabled
-              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-              : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
-          }`}
-        >
-          {isDisabled ? 'No disponible' : `Contactar a ${seller.name}`}
-        </button>
+        {product.state === 'en_venta' && (
+          <button
+            onClick={onContact}
+            className="w-full py-4 rounded-lg font-semibold text-lg bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition-colors"
+          >
+            Contactar a {seller.name}
+          </button>
+        )}
+        {product.state === 'reservado' && (
+          <button
+            disabled
+            className="w-full py-4 rounded-lg font-semibold text-lg bg-gray-200 text-gray-500 cursor-not-allowed"
+          >
+            Reservado
+          </button>
+        )}
+        {product.state === 'vendido' && (
+          // El botón se oculta si el producto está vendido
+          <button
+            disabled
+            className="w-full py-4 rounded-lg font-semibold text-lg bg-gray-200 text-gray-500 cursor-not-allowed"
+          >
+            Vendido
+          </button>
+        )}
       </div>
     </div>
   );

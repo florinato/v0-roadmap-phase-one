@@ -1,10 +1,11 @@
+
 'use client';
 
-import { useState, useEffect } from 'react';
-import SearchBar from './SearchBar';
+import { supabase } from '@/lib/supabase'; // Importar supabase
+import { useEffect, useState } from 'react'; // React importado correctamente
 import CategoryFilters from './CategoryFilters';
 import ProductCard from './ProductCard';
-import { getAllProducts, getProductsByCategory } from '@/lib/services/db';
+import SearchBar from './SearchBar';
 
 interface MarketViewProps {
   onProductTap?: (productId: string) => void;
@@ -21,11 +22,9 @@ export default function MarketView({ onProductTap }: MarketViewProps) {
     const loadProducts = async () => {
       setIsLoading(true);
       try {
-        if (selectedCategory === 'Todos') {
-          const data = await getAllProducts();
-          setProducts(data);
-        } else {
-          // Map category names to database values
+        let query = supabase.from('products').select('id, name, description, price, image_url, category, seller_id, state').eq('state', 'en_venta'); // Añadir filtro por estado
+
+        if (selectedCategory !== 'Todos') {
           const categoryMap: { [key: string]: string } = {
             'Libros': 'libros',
             'Uniformes': 'ropa',
@@ -34,9 +33,12 @@ export default function MarketView({ onProductTap }: MarketViewProps) {
             'Electrónica': 'tecnologia',
           };
           const dbCategory = categoryMap[selectedCategory] || selectedCategory.toLowerCase();
-          const data = await getProductsByCategory(dbCategory);
-          setProducts(data);
+          query = query.eq('category', dbCategory);
         }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        setProducts(data || []);
       } catch (error) {
         console.error('[v0] Error loading products:', error);
         setProducts([]);
@@ -68,7 +70,7 @@ export default function MarketView({ onProductTap }: MarketViewProps) {
           <div className="grid grid-cols-2 gap-3">
             {filteredProducts.map((product) => (
               <ProductCard
-                key={product.id}
+                key={product.id} // La prop key se aplica aquí directamente al componente
                 title={product.name}
                 price={product.price}
                 image={product.image_url || '/placeholder.png'}

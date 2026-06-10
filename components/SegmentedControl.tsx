@@ -1,26 +1,25 @@
+
 'use client';
 
 interface SegmentedControlProps {
-  selectedFilter: 'active' | 'reserved' | 'sold';
-  onFilterChange: (filter: 'active' | 'reserved' | 'sold') => void;
+  selectedFilter: 'en_venta' | 'reservado' | 'vendido';
+  onFilterChange: (filter: 'en_venta' | 'reservado' | 'vendido') => void;
+  options: { label: string; value: 'en_venta' | 'reservado' | 'vendido' }[];
 }
 
 export default function SegmentedControl({
   selectedFilter,
   onFilterChange,
+  options,
 }: SegmentedControlProps) {
   return (
     <div className="flex gap-0 bg-gray-100 p-1 rounded-lg mx-4 my-4">
-      {[
-        { key: 'active', label: 'En Venta' },
-        { key: 'reserved', label: 'Reservados' },
-        { key: 'sold', label: 'Vendidos' },
-      ].map(({ key, label }) => (
+      {options.map(({ label, value }) => (
         <button
-          key={key}
-          onClick={() => onFilterChange(key as 'active' | 'reserved' | 'sold')}
+          key={value}
+          onClick={() => onFilterChange(value)}
           className={`flex-1 py-2 px-3 rounded font-medium text-sm transition-colors ${
-            selectedFilter === key
+            selectedFilter === value
               ? 'bg-white text-blue-600 shadow-sm'
               : 'text-gray-600 hover:text-gray-900'
           }`}
